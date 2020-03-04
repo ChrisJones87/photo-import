@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -30,7 +31,7 @@ namespace PhotoImport.App.Utilities
             if (existingFiles.Contains(record.Filename))
             {
                // Duplicate found
-
+               Console.WriteLine($"DUPLICATE: {record.Filename}");
             }
             else
             {
