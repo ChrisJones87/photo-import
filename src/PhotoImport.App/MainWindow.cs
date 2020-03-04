@@ -30,6 +30,8 @@ namespace PhotoImport.App
 
       private async void ImportPhotos(object sender, RoutedEventArgs e)
       {
+         Console.BufferHeight = Int16.MaxValue - 1;
+
          await Task.Run(async () =>
          {
             Console.WriteLine("Import photos started.");
