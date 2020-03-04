@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ExifLibrary;
 
-namespace PhotoImport.App
+namespace PhotoImport.App.Utilities
 {
    [DebuggerDisplay("{Filename}")]
    public class FileRecord

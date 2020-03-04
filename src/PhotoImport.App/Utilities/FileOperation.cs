@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace PhotoImport.App
+namespace PhotoImport.App.Utilities
 {
    public sealed class FileOperation
    {
