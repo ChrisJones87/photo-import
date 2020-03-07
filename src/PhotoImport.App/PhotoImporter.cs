@@ -8,22 +8,36 @@ using PhotoImport.App.Utilities;
 
 namespace PhotoImport.App
 {
-   public static class PhotoImporter
+   public class PhotoImporter : IPhotoImporter
    {
-      public static async Task ImportAsync(ProcessingDirectories directories, CancellationToken cancellationToken = default)
+      private readonly ProcessingDirectories _directories;
+
+      public PhotoImporter(ProcessingDirectories directories)
       {
-         await ApplyStage1Async(directories, cancellationToken);
+         _directories = directories;
       }
 
-      private static async Task ApplyStage1Async(ProcessingDirectories directories, CancellationToken cancellationToken)
+      public async Task ImportAsync(CancellationToken cancellationToken)
+      {
+         await MoveUniqueFilesAsync(cancellationToken);
+
+         await ProcessDuplicatesAsync(cancellationToken);
+      }
+
+      private async Task ProcessDuplicatesAsync(CancellationToken cancellationToken)
+      {
+
+      }
+
+      private async Task MoveUniqueFilesAsync(CancellationToken cancellationToken)
       {
          Console.WriteLine("Finding files...");
-         var records = await FindFilesAsync(directories.SourceDirectory, cancellationToken);
+         var records = await FindFilesAsync(_directories.SourceDirectory, cancellationToken);
 
          Console.WriteLine($"Found {records.Count} files.");
 
          Console.WriteLine("Processing files...");
-         var targets = await ProcessFilesAsync(records, directories, cancellationToken);
+         var targets = await ProcessFilesAsync(records, cancellationToken);
 
          Console.WriteLine($"Found {targets.Count} directory targets");
 
@@ -32,7 +46,7 @@ namespace PhotoImport.App
          foreach (var target in targets)
          {
             Console.WriteLine($"Generating file operations for target {target.Key}");
-            var targetOperations = await target.GenerateActionPlanAsync(directories.DuplicateDirectory);
+            var targetOperations = await target.GenerateActionPlanAsync(_directories.DuplicateDirectory);
 
             Console.WriteLine($"Found {targetOperations.FileOperations.Count} file operations.");
 
@@ -50,9 +64,8 @@ namespace PhotoImport.App
       }
 
 
-      private static async Task<IReadOnlyList<TargetDirectory>> ProcessFilesAsync(IReadOnlyList<FileRecord> records,
-                                                                                  ProcessingDirectories directories,
-                                                                                  CancellationToken cancellationToken = default)
+      private async Task<IReadOnlyList<TargetDirectory>> ProcessFilesAsync(IReadOnlyList<FileRecord> records,
+                                                                           CancellationToken cancellationToken)
       {
          var outputs = new Dictionary<string, TargetDirectory>();
 
@@ -62,7 +75,7 @@ namespace PhotoImport.App
 
             if (!outputs.TryGetValue(key, out var targetDirectory))
             {
-               targetDirectory = await TargetDirectory.FromRecordAsync(directories, record);
+               targetDirectory = await TargetDirectory.FromRecordAsync(_directories, record);
                outputs[key] = targetDirectory;
             }
             else

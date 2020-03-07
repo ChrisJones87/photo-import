@@ -17,11 +17,11 @@ namespace PhotoImport.App
 
       private async void ImportPhotos(object sender, RoutedEventArgs e)
       {
-         Console.BufferHeight = Int16.MaxValue - 1;
+         Console.BufferHeight = short.MaxValue - 1;
 
          await Task.Run(async () =>
          {
-            var suffix = "Pixel";
+            var suffix = "Other";
 
             Console.WriteLine("Import photos started.");
             var sourceDirectory = $@"F:\Test\Source\{suffix}";
@@ -32,7 +32,9 @@ namespace PhotoImport.App
 
             var cancellationToken = CancellationToken.None;
 
-            await PhotoImporter.ImportAsync(directories, cancellationToken);
+            var importer = new PhotoImporter(directories);
+
+            await importer.ImportAsync(cancellationToken);
 
             Console.WriteLine("Complete");
          });

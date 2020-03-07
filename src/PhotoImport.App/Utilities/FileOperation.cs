@@ -62,7 +62,7 @@ namespace PhotoImport.App.Utilities
 
          try
          {
-            file.CopyTo(targetFilename, overwrite: false);
+            file.MoveTo(targetFilename, overwrite: false);
          }
          catch (Exception ex)
          {
