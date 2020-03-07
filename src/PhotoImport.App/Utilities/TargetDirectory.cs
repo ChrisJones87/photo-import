@@ -12,7 +12,7 @@ namespace PhotoImport.App.Utilities
 
       public List<FileRecord> SourceRecords { get; }
 
-      public DirectoryInfo DestinationRoot { get; }
+      public ProcessingDirectories ProcessingDirectories { get; }
       public DirectoryInfo DestinationDirectory { get; }
 
       public IReadOnlyList<string> GetExistingFilenames()
@@ -25,25 +25,49 @@ namespace PhotoImport.App.Utilities
          return this.DestinationDirectory.GetFiles().Select(x => x.Name).ToArray();
       }
 
-      private TargetDirectory(string key, List<FileRecord> sourceRecords, DirectoryInfo destinationRoot, DirectoryInfo destinationDirectory)
+      public async Task<IReadOnlyList<FileOperation>> GenerateFileOperationsAsync(DirectoryInfo duplicateRoot)
+      {
+         var operations = new List<FileOperation>();
+
+         var existingFiles = GetExistingFilenames().ToHashSet();
+
+         foreach (var record in SourceRecords)
+         {
+            if (existingFiles.Contains(record.Filename))
+            {
+               // Duplicate found
+               Console.WriteLine($"DUPLICATE: {record.Filename}");
+            }
+            else
+            {
+               var operation = FileOperation.From(record, this);
+               operations.Add(operation);
+            }
+
+            existingFiles.Add(record.Filename);
+         }
+
+         return operations;
+      }
+
+      private TargetDirectory(string key, List<FileRecord> sourceRecords, ProcessingDirectories processingDirectories, DirectoryInfo destinationDirectory)
       {
          Key = key;
          SourceRecords = sourceRecords;
-         DestinationRoot = destinationRoot;
+         ProcessingDirectories = processingDirectories;
          DestinationDirectory = destinationDirectory;
       }
 
-      public static async Task<TargetDirectory> FromRecordAsync(string outputRoot, FileRecord record)
+      public static async Task<TargetDirectory> FromRecordAsync(ProcessingDirectories processingDirectories, FileRecord record)
       {
          var key = record.GetTargetKey();
 
          if (key == null)
             return null;
 
-         var outputRootInfo = new DirectoryInfo(outputRoot);
-         var destination = record.GetTargetDirectory(outputRoot);
+         var destination = record.GetTargetDirectory(processingDirectories.OutputDirectory.FullName);
 
-         return new TargetDirectory(key, new List<FileRecord>() { record }, outputRootInfo, destination);
+         return new TargetDirectory(key, new List<FileRecord>() { record }, processingDirectories, destination);
       }
    }
 }

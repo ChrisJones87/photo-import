@@ -11,6 +11,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
@@ -18,6 +19,46 @@ using PhotoImport.App.Utilities;
 
 namespace PhotoImport.App
 {
+   public class ProcessingDirectories
+   {
+      public DirectoryInfo SourceDirectory { get; }
+
+      public DirectoryInfo OutputDirectory { get; }
+
+      public DirectoryInfo DuplicateDirectory { get; }
+
+      public ProcessingDirectories(DirectoryInfo sourceDirectory, DirectoryInfo outputDirectory, DirectoryInfo duplicateDirectory)
+      {
+         SourceDirectory = sourceDirectory;
+         OutputDirectory = outputDirectory;
+         DuplicateDirectory = duplicateDirectory;
+      }
+
+      public static ProcessingDirectories From(string sourceDirectory, string outputDirectory, string duplicateDirectory)
+      {
+         var sdi = new DirectoryInfo(sourceDirectory);
+         var odi = new DirectoryInfo(outputDirectory);
+         var ddi = new DirectoryInfo(duplicateDirectory);
+
+         if (!sdi.Exists)
+         {
+            throw new DirectoryNotFoundException(sourceDirectory);
+         }
+
+         if (!odi.Exists)
+         {
+            odi.Create();
+         }
+
+         if (!ddi.Exists)
+         {
+            ddi.Create();
+         }
+
+         return new ProcessingDirectories(sdi, odi, ddi);
+      }
+   }
+
    /// <summary>
    /// Interaction logic for MainWindow.xaml
    /// </summary>
@@ -35,8 +76,11 @@ namespace PhotoImport.App
          await Task.Run(async () =>
          {
             Console.WriteLine("Import photos started.");
-            var sourceDirectory = $@"F:\Test\Source";
-            var outputDirectory = $@"F:\Test\Output";
+            var sourceDirectory = @"F:\Test\Source";
+            var outputDirectory = @"F:\Test\Output";
+            var duplicateDirectory = @"F:\Test\Duplicates";
+
+            var directories = ProcessingDirectories.From(sourceDirectory, outputDirectory, duplicateDirectory);
 
             var cancellationToken = CancellationToken.None;
 
@@ -47,7 +91,7 @@ namespace PhotoImport.App
 
 
             Console.WriteLine("Processing files...");
-            var targets = await ProcessFilesAsync(records, outputDirectory, cancellationToken);
+            var targets = await ProcessFilesAsync(records, directories, cancellationToken);
 
             Console.WriteLine($"Found {targets.Count} directory targets");
 
@@ -56,7 +100,7 @@ namespace PhotoImport.App
             foreach (var target in targets)
             {
                Console.WriteLine($"Generating file operations for target {target.Key}");
-               var targetOperations = await FileOperation.GenerateFileOperationsAsync(target);
+               var targetOperations = await target.GenerateFileOperationsAsync(directories.DuplicateDirectory);
 
                Console.WriteLine($"Found {targetOperations.Count} file operations.");
 
@@ -72,7 +116,9 @@ namespace PhotoImport.App
       }
 
 
-      private async Task<IReadOnlyList<TargetDirectory>> ProcessFilesAsync(IReadOnlyList<FileRecord> records, string output, CancellationToken cancellationToken = default)
+      private async Task<IReadOnlyList<TargetDirectory>> ProcessFilesAsync(IReadOnlyList<FileRecord> records, 
+                                                                           ProcessingDirectories directories,
+                                                                           CancellationToken cancellationToken = default)
       {
          var outputs = new Dictionary<string, TargetDirectory>();
 
@@ -82,7 +128,7 @@ namespace PhotoImport.App
 
             if (!outputs.TryGetValue(key, out var targetDirectory))
             {
-               targetDirectory = await TargetDirectory.FromRecordAsync(output, record);
+               targetDirectory = await TargetDirectory.FromRecordAsync(directories, record);
                outputs[key] = targetDirectory;
             }
             else
