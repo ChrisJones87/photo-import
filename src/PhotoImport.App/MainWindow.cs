@@ -75,10 +75,12 @@ namespace PhotoImport.App
 
          await Task.Run(async () =>
          {
+            var suffix = "Pixel";
+
             Console.WriteLine("Import photos started.");
-            var sourceDirectory = @"F:\Test\Source";
-            var outputDirectory = @"F:\Test\Output";
-            var duplicateDirectory = @"F:\Test\Duplicates";
+            var sourceDirectory = $@"F:\Test\Source\{suffix}";
+            var outputDirectory = $@"F:\Test\Output\{suffix}";
+            var duplicateDirectory = $@"F:\Test\Duplicates\{suffix}";
 
             var directories = ProcessingDirectories.From(sourceDirectory, outputDirectory, duplicateDirectory);
 
@@ -110,8 +112,13 @@ namespace PhotoImport.App
             Console.WriteLine("Showing all operations:");
             foreach (var operation in operations)
             {
+               cancellationToken.ThrowIfCancellationRequested();
+
                Console.WriteLine(operation);
+               await operation.RunAsync();
             }
+
+            Console.WriteLine("Complete");
          });
       }
 
@@ -151,6 +158,8 @@ namespace PhotoImport.App
          return records;
       }
 
+      private static readonly string[] BlacklistedPrefixes = { "." };
+
       private async Task ProcessDirectoryAsync(DirectoryInfo sourceRoot, DirectoryInfo root, List<FileRecord> records, CancellationToken cancellationToken)
       {
          cancellationToken.ThrowIfCancellationRequested();
@@ -158,9 +167,19 @@ namespace PhotoImport.App
          if (!root.Exists)
             return;
 
+         if (BlacklistedPrefixes.Any(prefix => root.Name.StartsWith(prefix)))
+         {
+            Console.WriteLine($"Ignoring {root.FullName} as it starts with a period.");
+            return;
+         }
+
+         Console.WriteLine($"Searching in {root.FullName} for files...");
+
          foreach (var file in root.EnumerateFiles())
          {
             var record = await FileRecord.FromFileAsync(sourceRoot, file, cancellationToken);
+
+            Console.WriteLine($"Found {record.Filename}");
 
             records.Add(record);
          }

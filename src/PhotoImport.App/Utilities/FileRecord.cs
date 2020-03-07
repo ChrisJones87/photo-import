@@ -64,7 +64,7 @@ namespace PhotoImport.App.Utilities
          return record;
       }
 
-      private static readonly string[] ImageExtensions = { ".jpg", ".jpeg", ".png", ".bmp", ".tiff" };
+      private static readonly string[] ImageExtensions = {".jpg", ".jpeg", ".png", ".bmp", ".tiff"};
 
       private static async Task<DateTime?> TryDetectDate(FileInfo file)
       {
@@ -77,7 +77,26 @@ namespace PhotoImport.App.Utilities
             {
                var imageFile = await ImageFile.FromFileAsync(file.FullName);
 
-               return imageFile.Properties.Get<ExifDateTime>(ExifTag.DateTime);
+               ExifTag? GetDateTimeTag()
+               {
+                  if (imageFile.Properties.Contains(ExifTag.DateTime))
+                     return ExifTag.DateTime;
+
+                  if (imageFile.Properties.Contains(ExifTag.DateTimeOriginal))
+                     return ExifTag.DateTimeOriginal;
+
+                  if (imageFile.Properties.Contains(ExifTag.DateTimeDigitized))
+                     return ExifTag.DateTimeDigitized;
+
+                  return null;
+               }
+
+               var dateTimeTag = GetDateTimeTag();
+
+               if (dateTimeTag == null)
+                  return lastModifiedDate;
+
+               return imageFile.Properties.Get<ExifDateTime>(dateTimeTag.Value);
             }
 
             return lastModifiedDate;

@@ -36,7 +36,7 @@ namespace PhotoImport.App.Utilities
             if (existingFiles.Contains(record.Filename))
             {
                // Duplicate found
-               Console.WriteLine($"DUPLICATE: {record.Filename}");
+               Console.WriteLine($"Ignoring Duplicate: {record.Filename}");
             }
             else
             {
