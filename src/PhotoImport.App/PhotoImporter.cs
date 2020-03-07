@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -26,7 +27,92 @@ namespace PhotoImport.App
 
       private async Task ProcessDuplicatesAsync(CancellationToken cancellationToken)
       {
+         Console.WriteLine($"Finding all potential duplicates...");
+         var potentialDuplicates = await FindFilesAsync(_directories.SourceDirectory, cancellationToken);
 
+         Console.WriteLine($"Found {potentialDuplicates.Count} files.");
+
+         foreach (var potentialDuplicate in potentialDuplicates)
+         {
+            Console.WriteLine($"Processing {potentialDuplicate.Filename}...");
+
+            var targetDirectory = potentialDuplicate.GetTargetDirectory(_directories.OutputDirectory.FullName);
+
+            var targetFile = new FileInfo(Path.Combine(targetDirectory.FullName, potentialDuplicate.Filename));
+
+            if (!targetFile.Exists)
+            {
+               Console.WriteLine($"Matching file does not exist. This should not happen!");
+               Debugger.Break();
+            }
+
+            var isDuplicate = await CheckFilesMatchAsync(potentialDuplicate.File, targetFile, cancellationToken);
+
+            if (isDuplicate)
+            {
+               Console.WriteLine($"The file {potentialDuplicate.File.FullName} is a duplicate and will be ignored.");
+            }
+            else
+            {
+               Console.WriteLine($"The file {potentialDuplicate.File.FullName} is not a duplicate!");
+
+               var newFilename = await GenerateFilenameForDuplicateAsync(targetDirectory, potentialDuplicate.File);
+               Console.WriteLine($"File will be called {newFilename}");
+               var operation = FileOperation.From(_directories, potentialDuplicate, targetDirectory, newFilename);
+
+               Console.WriteLine("Running file operation...");
+               await operation.RunAsync();
+            }
+         }
+      }
+
+      private async Task<string> GenerateFilenameForDuplicateAsync(DirectoryInfo targetDirectory, FileInfo sourceFile)
+      {
+         var extension = Path.GetExtension(sourceFile.FullName);
+         var name = Path.GetFileNameWithoutExtension(sourceFile.FullName);
+
+         int suffix = 1;
+
+         while (true)
+         {
+            var newFilename = new FileInfo(Path.Combine(targetDirectory.FullName, $"{name} - {suffix:D2}{extension}"));
+
+            if (!newFilename.Exists)
+            {
+               return newFilename.FullName;
+            }
+
+            ++suffix;
+         }
+      }
+
+      private async Task<bool> CheckFilesMatchAsync(FileInfo file1, FileInfo file2, CancellationToken cancellationToken)
+      {
+         if (file1.Length != file2.Length)
+         {
+            Console.WriteLine("Files are different lengths.");
+            return false;
+         }
+
+         var file1Data = await File.ReadAllBytesAsync(file1.FullName, cancellationToken);
+         var file2Data = await File.ReadAllBytesAsync(file2.FullName, cancellationToken);
+
+         if (file1Data.Length != file2Data.Length)
+         {
+            Console.WriteLine("File contents are different lengths.");
+            return false;
+         }
+
+         for (long index = 0; index < file1Data.Length; ++index)
+         {
+            if (file1Data[index] != file2Data[index])
+            {
+               Console.WriteLine("File contents does not match");
+               return false;
+            }
+         }
+
+         return true;
       }
 
       private async Task MoveUniqueFilesAsync(CancellationToken cancellationToken)
@@ -53,7 +139,7 @@ namespace PhotoImport.App
             operations.AddRange(targetOperations.FileOperations);
          }
 
-         Console.WriteLine("Showing all operations:");
+         Console.WriteLine("Running all operations:");
          foreach (var operation in operations)
          {
             cancellationToken.ThrowIfCancellationRequested();
@@ -97,6 +183,7 @@ namespace PhotoImport.App
       }
 
       private static readonly string[] BlacklistedPrefixes = { "." };
+      private static readonly string[] BlacklistedExtensions = {".bin", ".exe", ".dll"};
 
       private static async Task ProcessDirectoryAsync(DirectoryInfo sourceRoot, DirectoryInfo root, List<FileRecord> records, CancellationToken cancellationToken)
       {
@@ -116,6 +203,12 @@ namespace PhotoImport.App
          foreach (var file in root.EnumerateFiles())
          {
             var record = await FileRecord.FromFileAsync(sourceRoot, file, cancellationToken);
+
+            if (BlacklistedExtensions.Any(ext => record.File.Extension.ToLower() == ext))
+            {
+               Console.WriteLine($"Ignoring {record.File.FullName} as its extension is {record.File.Extension}");
+               return;
+            }
 
             Console.WriteLine($"Found {record.Filename}");
 

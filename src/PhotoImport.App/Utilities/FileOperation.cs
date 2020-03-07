@@ -16,9 +16,14 @@ namespace PhotoImport.App.Utilities
       public DirectoryInfo DestinationDirectory { get; }
       public string TargetFilename { get; }
 
-      public static FileOperation From(FileRecord sourceRecord, TargetDirectory targetDirectory)
+      public static FileOperation From(FileRecord sourceRecord, TargetDirectory targetDirectory, string filename = null)
       {
-         return new FileOperation(sourceRecord, targetDirectory.ProcessingDirectories.OutputDirectory, targetDirectory.DestinationDirectory, sourceRecord.Filename);
+         return new FileOperation(sourceRecord, targetDirectory.ProcessingDirectories.OutputDirectory, targetDirectory.DestinationDirectory, filename ?? sourceRecord.Filename);
+      }
+
+      public static FileOperation From(ProcessingDirectories directories, FileRecord sourceRecord, DirectoryInfo targetDirectory, string filename = null)
+      {
+         return new FileOperation(sourceRecord, directories.OutputDirectory, targetDirectory, filename ?? sourceRecord.Filename);
       }
 
       public FileOperation(FileRecord sourceRecord, DirectoryInfo destinationRoot, DirectoryInfo destinationDirectory, string targetFilename)
@@ -58,7 +63,7 @@ namespace PhotoImport.App.Utilities
             destinationDirectory.Create();
          }
 
-         var targetFilename = Path.Combine(destinationDirectory.FullName, file.Name);
+         var targetFilename = Path.Combine(destinationDirectory.FullName, TargetFilename);
 
          try
          {

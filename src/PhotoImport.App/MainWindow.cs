@@ -21,7 +21,7 @@ namespace PhotoImport.App
 
          await Task.Run(async () =>
          {
-            var suffix = "Other";
+            var suffix = "HTC";
 
             Console.WriteLine("Import photos started.");
             var sourceDirectory = $@"F:\Test\Source\{suffix}";
