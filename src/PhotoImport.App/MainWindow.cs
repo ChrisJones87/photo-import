@@ -1,64 +1,14 @@
-﻿using System;
+﻿using PhotoImport.App.Utilities;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using PhotoImport.App.Utilities;
 
 namespace PhotoImport.App
 {
-   public class ProcessingDirectories
-   {
-      public DirectoryInfo SourceDirectory { get; }
-
-      public DirectoryInfo OutputDirectory { get; }
-
-      public DirectoryInfo DuplicateDirectory { get; }
-
-      public ProcessingDirectories(DirectoryInfo sourceDirectory, DirectoryInfo outputDirectory, DirectoryInfo duplicateDirectory)
-      {
-         SourceDirectory = sourceDirectory;
-         OutputDirectory = outputDirectory;
-         DuplicateDirectory = duplicateDirectory;
-      }
-
-      public static ProcessingDirectories From(string sourceDirectory, string outputDirectory, string duplicateDirectory)
-      {
-         var sdi = new DirectoryInfo(sourceDirectory);
-         var odi = new DirectoryInfo(outputDirectory);
-         var ddi = new DirectoryInfo(duplicateDirectory);
-
-         if (!sdi.Exists)
-         {
-            throw new DirectoryNotFoundException(sourceDirectory);
-         }
-
-         if (!odi.Exists)
-         {
-            odi.Create();
-         }
-
-         if (!ddi.Exists)
-         {
-            ddi.Create();
-         }
-
-         return new ProcessingDirectories(sdi, odi, ddi);
-      }
-   }
-
    /// <summary>
    /// Interaction logic for MainWindow.xaml
    /// </summary>
@@ -102,11 +52,11 @@ namespace PhotoImport.App
             foreach (var target in targets)
             {
                Console.WriteLine($"Generating file operations for target {target.Key}");
-               var targetOperations = await target.GenerateFileOperationsAsync(directories.DuplicateDirectory);
+               var targetOperations = await target.GenerateActionPlanAsync(directories.DuplicateDirectory);
 
-               Console.WriteLine($"Found {targetOperations.Count} file operations.");
+               Console.WriteLine($"Found {targetOperations.FileOperations.Count} file operations.");
 
-               operations.AddRange(targetOperations);
+               operations.AddRange(targetOperations.FileOperations);
             }
 
             Console.WriteLine("Showing all operations:");

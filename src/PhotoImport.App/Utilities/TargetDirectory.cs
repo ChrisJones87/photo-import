@@ -6,6 +6,16 @@ using System.Threading.Tasks;
 
 namespace PhotoImport.App.Utilities
 {
+   public class ActionPlan
+   {
+      public IReadOnlyList<FileOperation> FileOperations { get; }
+
+      public ActionPlan(IReadOnlyList<FileOperation> fileOperations)
+      {
+         FileOperations = fileOperations;
+      }
+   }
+
    public sealed class TargetDirectory
    {
       public string Key { get; }
@@ -25,7 +35,7 @@ namespace PhotoImport.App.Utilities
          return this.DestinationDirectory.GetFiles().Select(x => x.Name).ToArray();
       }
 
-      public async Task<IReadOnlyList<FileOperation>> GenerateFileOperationsAsync(DirectoryInfo duplicateRoot)
+      public async Task<ActionPlan> GenerateActionPlanAsync(DirectoryInfo duplicateRoot)
       {
          var operations = new List<FileOperation>();
 
@@ -47,7 +57,7 @@ namespace PhotoImport.App.Utilities
             existingFiles.Add(record.Filename);
          }
 
-         return operations;
+         return new ActionPlan(operations);
       }
 
       private TargetDirectory(string key, List<FileRecord> sourceRecords, ProcessingDirectories processingDirectories, DirectoryInfo destinationDirectory)
