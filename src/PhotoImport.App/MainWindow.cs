@@ -50,5 +50,14 @@ namespace PhotoImport.App
       }
 
 
+      private void SelectOrganiseOutputDirectory(object sender, RoutedEventArgs e)
+      {
+         
+      }
+
+      private void SelectOrganiseSourceDirectory(object sender, RoutedEventArgs e)
+      {
+         throw new NotImplementedException();
+      }
    }
 }

@@ -6,7 +6,26 @@
         xmlns:local="clr-namespace:PhotoImport.App"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
-    <Grid>
-      <Button Click="ImportPhotos">Go</Button>
-    </Grid>
+   <TabControl>
+      <TabControl.Items>
+         <TabItem Header="Organise">
+            <StackPanel Margin="5">
+               <Label>Source Directory</Label>
+               <DockPanel>
+                  <!--<Button DockPanel.Dock="Right" Click="SelectOrganiseSourceDirectory" Width="50" Margin="5,0,0,0">...</Button>-->
+               <TextBox x:Name="OrganiseSourceTextBox" Padding="5"></TextBox>
+                  </DockPanel>
+
+               <Label>Output Directory</Label>
+               <DockPanel>
+                  <!--<Button DockPanel.Dock="Right" Click="SelectOrganiseOutputDirectory" Width="50" Margin="5,0,0,0">...</Button>-->
+                  <TextBox x:Name="OrganiseOutputTextBox" Padding="5"></TextBox>
+               </DockPanel>
+               
+
+               <Button Click="ImportPhotos" Margin="0,10" Height="50">Import</Button>
+            </StackPanel>
+         </TabItem>
+      </TabControl.Items>
+   </TabControl>
 </Window>
