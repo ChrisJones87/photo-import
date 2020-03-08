@@ -140,7 +140,7 @@ namespace PhotoImport.App
          foreach (var target in targets)
          {
             _logger.LogInformation($"Generating file operations for target {target.Key}");
-            var targetOperations = await target.GenerateActionPlanAsync(_directories.DuplicateDirectory);
+            var targetOperations = await target.GenerateActionPlanAsync();
 
             _logger.LogInformation($"Found {targetOperations.FileOperations.Count} file operations.");
 

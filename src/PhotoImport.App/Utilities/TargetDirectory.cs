@@ -35,7 +35,7 @@ namespace PhotoImport.App.Utilities
          return this.DestinationDirectory.GetFiles().Select(x => x.Name).ToArray();
       }
 
-      public async Task<ActionPlan> GenerateActionPlanAsync(DirectoryInfo duplicateRoot)
+      public async Task<ActionPlan> GenerateActionPlanAsync()
       {
          var operations = new List<FileOperation>();
 
