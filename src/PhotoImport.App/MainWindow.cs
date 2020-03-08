@@ -2,6 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace PhotoImport.App
 {
@@ -10,8 +12,14 @@ namespace PhotoImport.App
    /// </summary>
    public partial class MainWindow : Window
    {
-      public MainWindow()
+      private readonly ILogger<MainWindow> _logger;
+      private readonly IServiceProvider _serviceProvider;
+
+
+      public MainWindow(ILogger<MainWindow> logger, IServiceProvider serviceProvider)
       {
+         _logger = logger;
+         _serviceProvider = serviceProvider;
          InitializeComponent();
       }
 
@@ -23,7 +31,7 @@ namespace PhotoImport.App
          {
             var suffix = "HTC";
 
-            Console.WriteLine("Import photos started.");
+            _logger.LogInformation("Import photos started.");
             var sourceDirectory = $@"F:\Test\Source\{suffix}";
             var outputDirectory = $@"F:\Test\Output\{suffix}";
             var duplicateDirectory = $@"F:\Test\Duplicates\{suffix}";
@@ -32,11 +40,12 @@ namespace PhotoImport.App
 
             var cancellationToken = CancellationToken.None;
 
-            var importer = new PhotoImporter(directories);
+            var logger = _serviceProvider.GetService<ILogger<PhotoImporter>>();
+            var importer = new PhotoImporter(directories, logger);
 
             await importer.ImportAsync(cancellationToken);
 
-            Console.WriteLine("Complete");
+            _logger.LogInformation("Complete");
          });
       }
 

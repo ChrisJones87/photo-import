@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using PhotoImport.App.Utilities;
 
 namespace PhotoImport.App
@@ -12,10 +13,12 @@ namespace PhotoImport.App
    public class PhotoImporter : IPhotoImporter
    {
       private readonly ProcessingDirectories _directories;
+      private readonly ILogger<PhotoImporter> _logger;
 
-      public PhotoImporter(ProcessingDirectories directories)
+      public PhotoImporter(ProcessingDirectories directories, ILogger<PhotoImporter> logger)
       {
          _directories = directories;
+         _logger = logger;
       }
 
       public async Task ImportAsync(CancellationToken cancellationToken)
@@ -27,14 +30,14 @@ namespace PhotoImport.App
 
       private async Task ProcessDuplicatesAsync(CancellationToken cancellationToken)
       {
-         Console.WriteLine($"Finding all potential duplicates...");
+         _logger.LogInformation($"Finding all potential duplicates...");
          var potentialDuplicates = await FindFilesAsync(_directories.SourceDirectory, cancellationToken);
 
-         Console.WriteLine($"Found {potentialDuplicates.Count} files.");
+         _logger.LogInformation($"Found {potentialDuplicates.Count} files.");
 
          foreach (var potentialDuplicate in potentialDuplicates)
          {
-            Console.WriteLine($"Processing {potentialDuplicate.Filename}...");
+            _logger.LogInformation($"Processing {potentialDuplicate.Filename}...");
 
             var targetDirectory = potentialDuplicate.GetTargetDirectory(_directories.OutputDirectory.FullName);
 
@@ -42,7 +45,7 @@ namespace PhotoImport.App
 
             if (!targetFile.Exists)
             {
-               Console.WriteLine($"Matching file does not exist. This should not happen!");
+               _logger.LogInformation($"Matching file does not exist. This should not happen!");
                Debugger.Break();
             }
 
@@ -50,18 +53,23 @@ namespace PhotoImport.App
 
             if (isDuplicate)
             {
-               Console.WriteLine($"The file {potentialDuplicate.File.FullName} is a duplicate and will be ignored.");
+               _logger.LogInformation($"The file {potentialDuplicate.File.FullName} is a duplicate and will be ignored.");
             }
             else
             {
-               Console.WriteLine($"The file {potentialDuplicate.File.FullName} is not a duplicate!");
+               _logger.LogInformation($"The file {potentialDuplicate.File.FullName} is not a duplicate!");
 
                var newFilename = await GenerateFilenameForDuplicateAsync(targetDirectory, potentialDuplicate.File);
-               Console.WriteLine($"File will be called {newFilename}");
+               _logger.LogInformation($"File will be called {newFilename}");
                var operation = FileOperation.From(_directories, potentialDuplicate, targetDirectory, newFilename);
 
-               Console.WriteLine("Running file operation...");
-               await operation.RunAsync();
+               _logger.LogInformation("Running file operation...");
+               var result = await operation.RunAsync();
+
+               if (!result.Success)
+               {
+                  _logger.LogError(result.Message);
+               }
             }
          }
       }
@@ -90,7 +98,7 @@ namespace PhotoImport.App
       {
          if (file1.Length != file2.Length)
          {
-            Console.WriteLine("Files are different lengths.");
+            _logger.LogInformation("Files are different lengths.");
             return false;
          }
 
@@ -99,7 +107,7 @@ namespace PhotoImport.App
 
          if (file1Data.Length != file2Data.Length)
          {
-            Console.WriteLine("File contents are different lengths.");
+            _logger.LogInformation("File contents are different lengths.");
             return false;
          }
 
@@ -107,7 +115,7 @@ namespace PhotoImport.App
          {
             if (file1Data[index] != file2Data[index])
             {
-               Console.WriteLine("File contents does not match");
+               _logger.LogInformation("File contents does not match");
                return false;
             }
          }
@@ -117,34 +125,34 @@ namespace PhotoImport.App
 
       private async Task MoveUniqueFilesAsync(CancellationToken cancellationToken)
       {
-         Console.WriteLine("Finding files...");
+         _logger.LogInformation("Finding files...");
          var records = await FindFilesAsync(_directories.SourceDirectory, cancellationToken);
 
-         Console.WriteLine($"Found {records.Count} files.");
+         _logger.LogInformation($"Found {records.Count} files.");
 
-         Console.WriteLine("Processing files...");
+         _logger.LogInformation("Processing files...");
          var targets = await ProcessFilesAsync(records, cancellationToken);
 
-         Console.WriteLine($"Found {targets.Count} directory targets");
+         _logger.LogInformation($"Found {targets.Count} directory targets");
 
          var operations = new List<FileOperation>();
 
          foreach (var target in targets)
          {
-            Console.WriteLine($"Generating file operations for target {target.Key}");
+            _logger.LogInformation($"Generating file operations for target {target.Key}");
             var targetOperations = await target.GenerateActionPlanAsync(_directories.DuplicateDirectory);
 
-            Console.WriteLine($"Found {targetOperations.FileOperations.Count} file operations.");
+            _logger.LogInformation($"Found {targetOperations.FileOperations.Count} file operations.");
 
             operations.AddRange(targetOperations.FileOperations);
          }
 
-         Console.WriteLine("Running all operations:");
+         _logger.LogInformation("Running all operations:");
          foreach (var operation in operations)
          {
             cancellationToken.ThrowIfCancellationRequested();
 
-            Console.WriteLine(operation);
+            _logger.LogInformation(operation.ToString());
             await operation.RunAsync();
          }
       }
@@ -173,7 +181,7 @@ namespace PhotoImport.App
          return outputs.Values.ToArray();
       }
 
-      private static async Task<IReadOnlyList<FileRecord>> FindFilesAsync(DirectoryInfo sourceDirectory, CancellationToken cancellation = default)
+      private async Task<IReadOnlyList<FileRecord>> FindFilesAsync(DirectoryInfo sourceDirectory, CancellationToken cancellation = default)
       {
          var records = new List<FileRecord>();
 
@@ -185,7 +193,7 @@ namespace PhotoImport.App
       private static readonly string[] BlacklistedPrefixes = { "." };
       private static readonly string[] BlacklistedExtensions = {".bin", ".exe", ".dll"};
 
-      private static async Task ProcessDirectoryAsync(DirectoryInfo sourceRoot, DirectoryInfo root, List<FileRecord> records, CancellationToken cancellationToken)
+      private async Task ProcessDirectoryAsync(DirectoryInfo sourceRoot, DirectoryInfo root, List<FileRecord> records, CancellationToken cancellationToken)
       {
          cancellationToken.ThrowIfCancellationRequested();
 
@@ -194,11 +202,11 @@ namespace PhotoImport.App
 
          if (BlacklistedPrefixes.Any(prefix => root.Name.StartsWith(prefix)))
          {
-            Console.WriteLine($"Ignoring {root.FullName} as it starts with a period.");
+            _logger.LogInformation($"Ignoring {root.FullName} as it starts with a period.");
             return;
          }
 
-         Console.WriteLine($"Searching in {root.FullName} for files...");
+         _logger.LogInformation($"Searching in {root.FullName} for files...");
 
          foreach (var file in root.EnumerateFiles())
          {
@@ -206,11 +214,11 @@ namespace PhotoImport.App
 
             if (BlacklistedExtensions.Any(ext => record.File.Extension.ToLower() == ext))
             {
-               Console.WriteLine($"Ignoring {record.File.FullName} as its extension is {record.File.Extension}");
+               _logger.LogInformation($"Ignoring {record.File.FullName} as its extension is {record.File.Extension}");
                return;
             }
 
-            Console.WriteLine($"Found {record.Filename}");
+            _logger.LogInformation($"Found {record.Filename}");
 
             records.Add(record);
          }

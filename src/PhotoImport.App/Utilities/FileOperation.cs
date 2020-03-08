@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Security.AccessControl;
+﻿using System.IO;
 using System.Threading.Tasks;
 using Exception = System.Exception;
 
@@ -10,11 +6,10 @@ namespace PhotoImport.App.Utilities
 {
    public sealed class FileOperation
    {
-      public FileRecord SourceRecord { get; }
-
-      public DirectoryInfo DestinationRoot { get; }
-      public DirectoryInfo DestinationDirectory { get; }
-      public string TargetFilename { get; }
+      public FileRecord SourceRecord { get; set; }
+      public DirectoryInfo DestinationRoot { get; set; }
+      public DirectoryInfo DestinationDirectory { get; set; }
+      public string TargetFilename { get; set; }
 
       public static FileOperation From(FileRecord sourceRecord, TargetDirectory targetDirectory, string filename = null)
       {
@@ -43,7 +38,7 @@ namespace PhotoImport.App.Utilities
          return $"{source} => {targetFull}";
       }
 
-      public async Task RunAsync()
+      public async Task<(bool Success,string Message)> RunAsync()
       {
          var file = SourceRecord.File;
 
@@ -51,8 +46,7 @@ namespace PhotoImport.App.Utilities
 
          if (!file.Exists)
          {
-            Console.WriteLine($"File '{file.FullName}' no longer exists...");
-            return;
+            return (false, $"File '{file.FullName}' no longer exists...");
          }
 
          var destinationDirectory = DestinationDirectory;
@@ -68,11 +62,11 @@ namespace PhotoImport.App.Utilities
          try
          {
             file.MoveTo(targetFilename, overwrite: false);
+            return (true, "");
          }
          catch (Exception ex)
          {
-            Console.WriteLine($"Failed to move file");
-            Console.WriteLine(ex);
+            return (false, $"Failed to move file: {ex}");
          }
       }
    }

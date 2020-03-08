@@ -5,8 +5,10 @@ using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace PhotoImport.App
 {
@@ -23,6 +25,14 @@ namespace PhotoImport.App
             .ConfigureServices((context, services) =>
             {
                services.AddSingleton<MainWindow>();
+            })
+            .ConfigureAppConfiguration((context, config) =>
+            {
+               config.SetBasePath(context.HostingEnvironment.ContentRootPath);
+            })
+            .ConfigureLogging(logging =>
+            {
+               logging.AddConsole();
             })
             .Build();
       }
