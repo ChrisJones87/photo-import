@@ -60,6 +60,14 @@ namespace PhotoImport.App
                return;
             }
 
+            if (new DirectoryInfo(sourceDirectory).FullName == new DirectoryInfo(outputDirectory).FullName)
+            {
+               MessageBox.Show(this, $"The source directory must be different from the output directory.", "Error", MessageBoxButton.OK);
+               return;
+            }
+
+            // TODO: Check the output directory is not inside the source directory
+
             var progress = new Progress<decimal>(percent =>
             {
                ProgressBar.Value = (int)percent;
