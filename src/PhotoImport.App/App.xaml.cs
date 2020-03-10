@@ -35,10 +35,10 @@ namespace PhotoImport.App
             .ConfigureLogging(logging =>
             {
                logging.AddSerilog();
-               logging.AddConsole();
-               
-               var logFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PhotoImporter", $"PhotoImport-{DateTime.Now:yyyy-MM-dd_HH:mm:ss}.log");
+
+               var logFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PhotoImporter", "PhotoImport-{Date}.log");
                logging.AddFile(logFilePath);
+               logging.AddConsole();
             })
             .Build();
       }

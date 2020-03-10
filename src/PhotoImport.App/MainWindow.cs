@@ -30,12 +30,17 @@ namespace PhotoImport.App
       {
          Console.BufferHeight = short.MaxValue - 1;
 
+         _logger.LogInformation("Import Photos requested by user");
+
          try
          {
             ImportPhotosButton.IsEnabled = false;
 
             var sourceDirectory = OrganiseSourceTextBox.Text;
             var outputDirectory = OrganiseOutputTextBox.Text;
+
+            _logger.LogInformation($"Source Directory: {sourceDirectory}");
+            _logger.LogInformation($"Output Directory: {outputDirectory}");
 
             if (string.IsNullOrWhiteSpace(sourceDirectory))
             {
