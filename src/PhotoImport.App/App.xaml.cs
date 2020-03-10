@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -9,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Serilog;
 
 namespace PhotoImport.App
 {
@@ -32,7 +34,11 @@ namespace PhotoImport.App
             })
             .ConfigureLogging(logging =>
             {
+               logging.AddSerilog();
                logging.AddConsole();
+               
+               var logFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PhotoImporter", $"PhotoImport-{DateTime.Now:yyyy-MM-dd_HH:mm:ss}.log");
+               logging.AddFile(logFilePath);
             })
             .Build();
       }

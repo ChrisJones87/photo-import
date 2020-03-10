@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -14,12 +15,14 @@ namespace PhotoImport.App
    {
       private readonly ILogger<MainWindow> _logger;
       private readonly IServiceProvider _serviceProvider;
+      private readonly ILoggerFactory _loggerFactory;
 
 
-      public MainWindow(ILogger<MainWindow> logger, IServiceProvider serviceProvider)
+      public MainWindow(ILogger<MainWindow> logger, IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
       {
          _logger = logger;
          _serviceProvider = serviceProvider;
+         _loggerFactory = loggerFactory;
          InitializeComponent();
       }
 
@@ -27,37 +30,51 @@ namespace PhotoImport.App
       {
          Console.BufferHeight = short.MaxValue - 1;
 
-         await Task.Run(async () =>
+         try
          {
-            var suffix = "HTC";
+            ImportPhotosButton.IsEnabled = false;
 
-            _logger.LogInformation("Import photos started.");
-            var sourceDirectory = $@"F:\Test\Source\{suffix}";
-            var outputDirectory = $@"F:\Test\Output\{suffix}";
-            var duplicateDirectory = $@"F:\Test\Duplicates\{suffix}";
+            var sourceDirectory = OrganiseSourceTextBox.Text;
+            var outputDirectory = OrganiseOutputTextBox.Text;
 
-            var directories = ProcessingDirectories.From(sourceDirectory, outputDirectory, duplicateDirectory);
+            if (string.IsNullOrWhiteSpace(sourceDirectory))
+            {
+               MessageBox.Show(this, $"The source directory must be supplied.", "Error", MessageBoxButton.OK);
+               return;
+            }
 
-            var cancellationToken = CancellationToken.None;
+            if (string.IsNullOrWhiteSpace(outputDirectory))
+            {
+               MessageBox.Show(this, $"The output directory must be supplied.", "Error", MessageBoxButton.OK);
+               return;
+            }
 
-            var logger = _serviceProvider.GetService<ILogger<PhotoImporter>>();
-            var importer = new PhotoImporter(directories, logger);
+            if (!Directory.Exists(sourceDirectory))
+            {
+               MessageBox.Show(this, $"The source directory {sourceDirectory} does not exist.", "Error", MessageBoxButton.OK);
+               return;
+            }
 
-            await importer.ImportAsync(cancellationToken);
+            await Task.Run(async () =>
+            {
+               _logger.LogInformation($"Import photos started from {sourceDirectory} to {outputDirectory}");
 
-            _logger.LogInformation("Complete");
-         });
-      }
+               var directories = ProcessingDirectories.From(sourceDirectory, outputDirectory, null);
 
+               var cancellationToken = CancellationToken.None;
 
-      private void SelectOrganiseOutputDirectory(object sender, RoutedEventArgs e)
-      {
-         
-      }
+               var logger = _serviceProvider.GetService<ILogger<PhotoImporter>>();
+               var importer = new PhotoImporter(directories, logger);
 
-      private void SelectOrganiseSourceDirectory(object sender, RoutedEventArgs e)
-      {
-         throw new NotImplementedException();
+               await importer.ImportAsync(cancellationToken);
+
+               _logger.LogInformation("Complete");
+            });
+         }
+         finally
+         {
+            ImportPhotosButton.IsEnabled = true;
+         }
       }
    }
 }

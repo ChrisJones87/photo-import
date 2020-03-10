@@ -21,7 +21,6 @@ namespace PhotoImport.App
       {
          var sdi = new DirectoryInfo(sourceDirectory);
          var odi = new DirectoryInfo(outputDirectory);
-         var ddi = new DirectoryInfo(duplicateDirectory);
 
          if (!sdi.Exists)
          {
@@ -33,12 +32,7 @@ namespace PhotoImport.App
             odi.Create();
          }
 
-         if (!ddi.Exists)
-         {
-            ddi.Create();
-         }
-
-         return new ProcessingDirectories(sdi, odi, ddi);
+         return new ProcessingDirectories(sdi, odi, null);
       }
    }
 }
