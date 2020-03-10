@@ -60,6 +60,11 @@ namespace PhotoImport.App
                return;
             }
 
+            var progress = new Progress<decimal>(percent =>
+            {
+               ProgressBar.Value = (int)percent;
+            });
+
             await Task.Run(async () =>
             {
                _logger.LogInformation($"Import photos started from {sourceDirectory} to {outputDirectory}");
@@ -71,7 +76,7 @@ namespace PhotoImport.App
                var logger = _serviceProvider.GetService<ILogger<PhotoImporter>>();
                var importer = new PhotoImporter(directories, logger);
 
-               await importer.ImportAsync(cancellationToken);
+               await importer.ImportAsync(progress, cancellationToken);
 
                _logger.LogInformation("Complete");
             });

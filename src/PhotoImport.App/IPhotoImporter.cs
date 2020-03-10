@@ -1,10 +1,11 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace PhotoImport.App
 {
    public interface IPhotoImporter
    {
-      Task ImportAsync(CancellationToken cancellationToken = default);
+      Task ImportAsync(IProgress<decimal> progress, CancellationToken cancellationToken = default);
    }
 }

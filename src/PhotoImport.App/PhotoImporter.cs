@@ -21,55 +21,77 @@ namespace PhotoImport.App
          _logger = logger;
       }
 
-      public async Task ImportAsync(CancellationToken cancellationToken)
+      public async Task ImportAsync(IProgress<decimal> progress, CancellationToken cancellationToken)
       {
-         await MoveUniqueFilesAsync(cancellationToken);
+         progress.Report(0);
 
-         await ProcessDuplicatesAsync(cancellationToken);
+         await MoveUniqueFilesAsync(progress, cancellationToken);
+
+         await ProcessDuplicatesAsync(progress, cancellationToken);
       }
 
-      private async Task ProcessDuplicatesAsync(CancellationToken cancellationToken)
+      private async Task ProcessDuplicatesAsync(IProgress<decimal> progress, CancellationToken cancellationToken)
       {
+         progress.Report(60);
+
          _logger.LogInformation($"Finding all potential duplicates...");
          var potentialDuplicates = await FindFilesAsync(_directories.SourceDirectory, cancellationToken);
 
          _logger.LogInformation($"Found {potentialDuplicates.Count} files.");
 
+         progress.Report(70);
+
+         if (potentialDuplicates.Count == 0)
+         {
+            progress.Report(100);
+            return;
+         }
+
+         var increment = 30m / potentialDuplicates.Count;
+
+         var prog = 70m;
          foreach (var potentialDuplicate in potentialDuplicates)
          {
-            _logger.LogInformation($"Processing {potentialDuplicate.Filename}...");
+            await ProgressDuplicateAsync(potentialDuplicate, cancellationToken);
+            prog += increment;
+            progress.Report(prog);
+         }
+      }
 
-            var targetDirectory = potentialDuplicate.GetTargetDirectory(_directories.OutputDirectory.FullName);
+      private async Task ProgressDuplicateAsync(FileRecord potentialDuplicate, CancellationToken cancellationToken)
+      {
+         _logger.LogInformation($"Processing {potentialDuplicate.Filename}...");
 
-            var targetFile = new FileInfo(Path.Combine(targetDirectory.FullName, potentialDuplicate.Filename));
+         var targetDirectory = potentialDuplicate.GetTargetDirectory(_directories.OutputDirectory.FullName);
 
-            if (!targetFile.Exists)
+         var targetFile = new FileInfo(Path.Combine(targetDirectory.FullName, potentialDuplicate.Filename));
+
+         if (!targetFile.Exists)
+         {
+            _logger.LogInformation($"Matching file does not exist. This should not happen!");
+            return;
+         }
+
+         var isDuplicate = await CheckFilesMatchAsync(potentialDuplicate.File, targetFile, cancellationToken);
+
+         if (isDuplicate)
+         {
+            _logger.LogInformation($"The file {potentialDuplicate.File.FullName} is a duplicate and will be ignored.");
+         }
+         else
+         {
+            _logger.LogInformation($"The file {potentialDuplicate.File.FullName} is not a duplicate!");
+
+            var newFilename = await GenerateFilenameForDuplicateAsync(targetDirectory, potentialDuplicate.File);
+            _logger.LogInformation($"File will be called {newFilename}");
+            var operation = FileOperation.From(_directories, potentialDuplicate, targetDirectory, newFilename);
+
+            _logger.LogInformation("Running file operation...");
+            var result = await operation.RunAsync();
+
+            if (!result.Success)
             {
-               _logger.LogInformation($"Matching file does not exist. This should not happen!");
-               Debugger.Break();
-            }
-
-            var isDuplicate = await CheckFilesMatchAsync(potentialDuplicate.File, targetFile, cancellationToken);
-
-            if (isDuplicate)
-            {
-               _logger.LogInformation($"The file {potentialDuplicate.File.FullName} is a duplicate and will be ignored.");
-            }
-            else
-            {
-               _logger.LogInformation($"The file {potentialDuplicate.File.FullName} is not a duplicate!");
-
-               var newFilename = await GenerateFilenameForDuplicateAsync(targetDirectory, potentialDuplicate.File);
-               _logger.LogInformation($"File will be called {newFilename}");
-               var operation = FileOperation.From(_directories, potentialDuplicate, targetDirectory, newFilename);
-
-               _logger.LogInformation("Running file operation...");
-               var result = await operation.RunAsync();
-
-               if (!result.Success)
-               {
-                  _logger.LogError(result.Message);
-               }
+               _logger.LogError(result.Message);
             }
          }
       }
@@ -123,17 +145,23 @@ namespace PhotoImport.App
          return true;
       }
 
-      private async Task MoveUniqueFilesAsync(CancellationToken cancellationToken)
+      private async Task MoveUniqueFilesAsync(IProgress<decimal> progress, CancellationToken cancellationToken)
       {
+         progress.Report(10);
+
          _logger.LogInformation("Finding files...");
          var records = await FindFilesAsync(_directories.SourceDirectory, cancellationToken);
 
          _logger.LogInformation($"Found {records.Count} files.");
 
+         progress.Report(30);
+
          _logger.LogInformation("Processing files...");
          var targets = await ProcessFilesAsync(records, cancellationToken);
 
          _logger.LogInformation($"Found {targets.Count} directory targets");
+
+         progress.Report(40);
 
          var operations = new List<FileOperation>();
 
@@ -155,6 +183,8 @@ namespace PhotoImport.App
             _logger.LogInformation(operation.ToString());
             await operation.RunAsync();
          }
+
+         progress.Report(50);
       }
 
 
